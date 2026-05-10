@@ -13,17 +13,13 @@ Analyst question
  FastAPI /query
       │
       ▼
- ChromaDB retrieval          ← all-MiniLM-L6-v2 embeddings (local, free)
-  (top-5 chunks)
+ RunnableParallel (LCEL chain)
+      ├── ChromaDB retriever      ← all-MiniLM-L6-v2 embeddings (local, free)
+      │    (top-5 chunks)
+      └── question passthrough
       │
-      ▼
- Prompt assembly
-      │
-      ▼
- Groq API (Llama 3.3 70B)   ← free tier
-      │
-      ▼
- Answer + source chunks
+      ├── PromptTemplate | ChatGroq (Llama 3.3 70B) | StrOutputParser → answer
+      └── context passthrough                                          → sources
 ```
 
 ---
@@ -33,11 +29,7 @@ Analyst question
 ### 1. Install dependencies
 
 ```bash
-pip install fastapi "uvicorn[standard]" python-dotenv pydantic \
-            langchain langchain-community langchain-chroma \
-            langchain-huggingface langchain-text-splitters \
-            langchain-core sentence-transformers chromadb \
-            pypdf tqdm groq
+pip install -r requirements.txt
 ```
 
 ### 2. Set your API key
@@ -108,17 +100,19 @@ Never commit this file. Add it to `.gitignore`.
 
 Lists the Python packages the project depends on. Install with `pip install -r requirements.txt`.
 
-> **Note:** This file is currently out of date with the actual stack. Use the `pip install` command in the Quick Start section above for a working installation.
+Install with `pip install -r requirements.txt`.
 
 ---
 
 ### `app/main.py`
 
-The FastAPI application. It is the only process that needs to be running during normal use. It starts the HTTP server, holds the RAG pipeline in memory, and exposes three endpoints.
+The FastAPI application. It is the only process that needs to be running during normal use. It starts the HTTP server, builds the LCEL RAG chain in memory at startup, and exposes three endpoints.
 
-#### Imports and config block (lines 1–43)
+#### Imports and config block
 
-Standard library and third-party imports. The config constants defined here are the single place to tune behaviour:
+Key third-party imports: `langchain_groq.ChatGroq`, `langchain_core.prompts.PromptTemplate`, `langchain_core.output_parsers.StrOutputParser`, `langchain_core.runnables.RunnablePassthrough`/`RunnableParallel`, `langchain_chroma.Chroma`, `langchain_huggingface.HuggingFaceEmbeddings`.
+
+The config constants defined here are the single place to tune behaviour:
 
 | Constant | Default | Purpose |
 |---|---|---|
@@ -128,33 +122,50 @@ Standard library and third-party imports. The config constants defined here are 
 | `LLM_MODEL` | `llama-3.3-70b-versatile` | Groq model used to generate answers |
 | `TOP_K` | `5` | Number of document chunks retrieved per query |
 
-#### `build_prompt(context, question)` (lines 47–62)
+#### `PROMPT` (module-level `PromptTemplate`)
 
-A plain-string prompt builder. Takes the concatenated retrieved chunks (`context`) and the analyst's `question`, and returns a formatted prompt string. The prompt instructs the LLM to:
+A `langchain_core.prompts.PromptTemplate` with input variables `context` and `question`. The prompt instructs the LLM to:
 - Answer only from the provided context.
 - Always cite case IDs (e.g. `FR-2024-001`).
 - Return a fixed fallback if the answer is not in the context.
 
-#### `class RAGPipeline` (lines 67–159)
+#### `format_docs(docs)` helper
+
+Concatenates a list of retrieved `Document` objects into a single context string, separating chunks with `---` dividers.
+
+#### `class RAGPipeline`
 
 A singleton class instantiated once at startup (`pipeline = RAGPipeline()`). Holds all expensive resources in memory so they are reused across requests.
 
 **`__init__`**
 
-Runs when the server starts. Does three things:
-1. Validates `GROQ_API_KEY` is set; raises `RuntimeError` immediately if missing so the server fails fast rather than on first request.
-2. Loads the HuggingFace embedding model onto CPU. The same model must be used here and in `ingest.py`, otherwise retrieved chunks will be nonsense.
-3. Opens the ChromaDB collection at `CHROMA_DIR`. If the directory does not yet exist (i.e. ingest has never been run), ChromaDB creates an empty collection — queries will return no results but won't crash.
+Runs when the server starts. Builds all pipeline components and wires them into a single LCEL chain:
+
+1. Loads the HuggingFace embedding model onto CPU. The same model must be used here and in `ingest.py`, otherwise retrieved chunks will be nonsense.
+2. Opens the ChromaDB collection at `CHROMA_DIR`. If the directory does not yet exist (i.e. ingest has never been run), ChromaDB creates an empty collection — queries will return no results but won't crash.
+3. Creates `self.retriever` from the vector store (`similarity` search, top-K results).
+4. Validates `GROQ_API_KEY` is set; raises `RuntimeError` immediately if missing so the server fails fast rather than on first request.
+5. Instantiates `ChatGroq` (temperature `0.1`, max tokens `512`).
+6. Assembles the LCEL chain using `RunnableParallel`:
+
+```
+question
+    │
+RunnableParallel
+    ├── retriever  → [doc1..doc5]   (retrieved once)
+    └── passthrough → question
+    │
+    ├── PROMPT | llm | StrOutputParser  → "answer"
+    └── passthrough                     → "context" (same docs)
+```
 
 **`query(question, fraud_type=None)`**
 
-Called on every `POST /query` request. Executes the full RAG loop:
+Called on every `POST /query` request. Executes the full RAG loop in a single `chain.invoke(question)` call — the retriever runs exactly once:
 
-1. Builds `search_kwargs`. If `fraud_type` is provided, adds a ChromaDB metadata filter so only chunks with a matching `fraud_type` field are considered.
-2. Creates a retriever from the vector store and calls `.invoke(question)` to fetch the top-K most semantically similar chunks.
-3. Joins the chunk texts into a single `context` string separated by `---` dividers.
-4. Calls `build_prompt` and sends the prompt to Groq via the official `groq` SDK (`client.chat.completions.create`).
-5. Formats source metadata for each retrieved chunk (content preview, case_id, fraud_type, date, source file) and returns them alongside the answer.
+1. If `fraud_type` is provided, updates the retriever's `search_kwargs` with a ChromaDB metadata filter so only chunks with a matching `fraud_type` field are considered.
+2. Calls `self.chain.invoke(question)` — returns `{"answer": str, "context": [docs]}`.
+3. Formats source metadata for each retrieved chunk (content preview, `case_id`, `fraud_type`, `date`, source file) and returns them alongside the answer.
 
 **`ingest_file(file_path, file_suffix)`**
 
@@ -165,11 +176,11 @@ Called on every `POST /ingest` request (file upload). Handles three formats:
 
 After loading, `RecursiveCharacterTextSplitter` splits documents into 800-character chunks (150-character overlap), and the chunks are added to the live ChromaDB collection. Returns the number of chunks added.
 
-#### FastAPI app and middleware (lines 162–179)
+#### FastAPI app and middleware
 
 Creates the `FastAPI` instance and attaches `CORSMiddleware` with `allow_origins=["*"]`. The wildcard is fine for local development — restrict this before any public deployment.
 
-#### Pydantic schemas (lines 182–213)
+#### Pydantic schemas
 
 Request and response shapes validated automatically by FastAPI:
 
@@ -180,7 +191,7 @@ Request and response shapes validated automatically by FastAPI:
 | `SourceChunk` | nested in `QueryResponse` | `content`, `case_id`, `fraud_type`, `date`, `source` |
 | `IngestResponse` | response from `/ingest` | `message` (str), `chunks_added` (int) |
 
-#### Routes (lines 216–268)
+#### Routes
 
 **`GET /health`**  
 Returns the running LLM model name, embedding model name, and collection name. Use this to confirm the server started correctly.
@@ -197,11 +208,11 @@ Accepts a multipart file upload. Validates the file extension is `.pdf`, `.txt`,
 
 A standalone CLI script run once (or whenever you have new reports) to populate ChromaDB. It does not import anything from `app/` and has no dependency on the server being running.
 
-#### Config block (lines 31–35)
+#### Config block
 
 Same `CHROMA_DIR`, `EMBEDDING_MODEL`, `CHUNK_SIZE`, and `CHUNK_OVERLAP` constants as `app/main.py`. If you change these values, change them in both files — they must match.
 
-#### Loader functions (lines 40–68)
+#### Loader functions
 
 Three file-format-specific loaders, registered in `LOADER_MAP`:
 
@@ -211,19 +222,19 @@ Three file-format-specific loaders, registered in `LOADER_MAP`:
 | `load_txt(path)` | `.txt` | `TextLoader` from `langchain-community` |
 | `load_json(path)` | `.json` | Custom — reads a JSON array, converts each record to a `Document` with `case_id`, `fraud_type`, and `date` metadata |
 
-#### `load_documents(data_dir)` (lines 73–89)
+#### `load_documents(data_dir)`
 
 Walks the given directory recursively, finds all files with extensions in `LOADER_MAP`, and loads them. Skips files that raise exceptions (prints a warning) so a single bad file doesn't abort the whole run. Returns a flat list of `Document` objects.
 
-#### `chunk_documents(docs)` (lines 92–100)
+#### `chunk_documents(docs)`
 
 Splits every document using `RecursiveCharacterTextSplitter`. The splitter tries to break on paragraph boundaries first (`\n\n`), then lines, sentences, words, and finally characters. Returns a flat list of chunk `Document` objects.
 
-#### `build_vectorstore(chunks, collection)` (lines 103–119)
+#### `build_vectorstore(chunks, collection)`
 
 Loads the HuggingFace embedding model (downloads on first run, then cached), embeds all chunks, and writes them to ChromaDB at `CHROMA_DIR`. Uses `Chroma.from_documents` which creates the collection if it doesn't exist and overwrites if it does.
 
-#### `SAMPLE_REPORTS` and `generate_sample_data()` (lines 124–198)
+#### `SAMPLE_REPORTS` and `generate_sample_data()`
 
 A hardcoded list of 5 synthetic fraud cases used for development and testing. `generate_sample_data()` serialises them to `data/reports/sample_reports.json`. Triggered by the `--sample` CLI flag. The five cases cover:
 
@@ -235,7 +246,7 @@ A hardcoded list of 5 synthetic fraud cases used for development and testing. `g
 | FR-2024-004 | synthetic_identity | fraud confirmed |
 | FR-2024-005 | internal_fraud | fraud confirmed |
 
-#### CLI entry point (lines 203–222)
+#### CLI entry point
 
 Parses three arguments:
 
@@ -325,9 +336,3 @@ curl -X POST http://localhost:8000/ingest \
 }
 ```
 
----
-
-## Known issues
-
-- **`requirements.txt` is stale** — it still references `langchain-openai` and `chromadb` (the old standalone package). The actual stack uses `groq`, `langchain-chroma`, `langchain-huggingface`, and `sentence-transformers`. Use the install command in Quick Start.
-- **Chroma import mismatch** — `app/main.py` imports `Chroma` from `langchain_chroma` (current). `scripts/ingest.py` still imports it from `langchain_community.vectorstores` (deprecated). Both work today but will diverge when `langchain-community` drops the alias.

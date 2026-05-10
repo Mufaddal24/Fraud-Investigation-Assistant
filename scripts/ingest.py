@@ -12,7 +12,8 @@ Usage:
     python scripts/ingest.py --data_dir data/reports
 
 Requirements:
-    pip install langchain langchain-community langchain-huggingface \
+    pip install langchain langchain-community langchain-chroma \
+                langchain-huggingface langchain-text-splitters \
                 chromadb sentence-transformers pypdf tqdm
 """
 
@@ -24,7 +25,7 @@ from tqdm import tqdm
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
