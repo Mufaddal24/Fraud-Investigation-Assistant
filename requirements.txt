@@ -1,0 +1,25 @@
+# Core
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+
+# LangChain
+langchain
+langchain-openai
+langchain-community
+
+# Vector store & embeddings
+chromadb
+
+# Document loaders
+pypdf
+
+# Evaluation
+ragas
+datasets
+flashrank
+pandas
+
+# UI (run separately)
+streamlit

@@ -1,0 +1,71 @@
+[
+  {
+    "case_id": "FR-2024-001",
+    "fraud_type": "card_not_present",
+    "date": "2024-03-12",
+    "summary": "Unauthorised e-commerce transactions totalling $4,200 across 3 merchants.",
+    "details": "The customer reported 7 transactions they did not initiate, all placed within a 40-minute window from an IP address in Eastern Europe. Card details were likely obtained via a phishing email two days prior. Resolution: all transactions reversed, new card issued, customer enrolled in 2FA for online purchases.",
+    "flagged_signals": [
+      "geo_velocity",
+      "ip_mismatch",
+      "unusual_merchant_category"
+    ],
+    "resolution": "fraud_confirmed",
+    "analyst": "A. Patel"
+  },
+  {
+    "case_id": "FR-2024-002",
+    "fraud_type": "account_takeover",
+    "date": "2024-04-01",
+    "summary": "Account credentials compromised via credential stuffing.",
+    "details": "Automated login attempts from 15 distinct IPs within 10 minutes succeeded using leaked credentials from a third-party breach. Attacker changed the registered email and initiated a $1,800 wire transfer. Resolution: transfer blocked, account locked, credentials reset.",
+    "flagged_signals": [
+      "login_velocity",
+      "email_change",
+      "wire_transfer_new_beneficiary"
+    ],
+    "resolution": "fraud_confirmed",
+    "analyst": "B. Kumar"
+  },
+  {
+    "case_id": "FR-2024-003",
+    "fraud_type": "friendly_fraud",
+    "date": "2024-04-18",
+    "summary": "Customer disputed a $320 restaurant charge.",
+    "details": "Investigation found CCTV footage showing the cardholder present at the premises. Chip-and-PIN authentication confirmed. Dispute ruled in favour of the merchant. Resolution: chargeback denied, customer informed.",
+    "flagged_signals": [
+      "chargeback_history",
+      "merchant_dispute"
+    ],
+    "resolution": "fraud_not_confirmed",
+    "analyst": "C. Singh"
+  },
+  {
+    "case_id": "FR-2024-004",
+    "fraud_type": "synthetic_identity",
+    "date": "2024-05-05",
+    "summary": "Synthetic identity account; $6,500 charged and abandoned.",
+    "details": "Applicant combined a real SSN (belonging to a minor) with fabricated name/address. Passed KYC but flagged when address failed USPS validation two weeks post-opening. Spending in high-liquidation categories (electronics, gift cards). Resolution: account closed, $6,500 loss, SAR filed with FinCEN.",
+    "flagged_signals": [
+      "address_invalid",
+      "high_liquidation_categories",
+      "thin_credit_file"
+    ],
+    "resolution": "fraud_confirmed",
+    "analyst": "D. Mehta"
+  },
+  {
+    "case_id": "FR-2024-005",
+    "fraud_type": "internal_fraud",
+    "date": "2024-05-20",
+    "summary": "Employee made unauthorised fee waivers totalling $8,900 over 6 months.",
+    "details": "Audit flag triggered on high fee-waiver volume from a single employee ID. 47 waivers issued outside normal approval workflow, mostly to accounts sharing the employee's address. Resolution: employee terminated, case referred to law enforcement, controls gap remediated.",
+    "flagged_signals": [
+      "fee_waiver_volume",
+      "employee_linked_accounts",
+      "audit_anomaly"
+    ],
+    "resolution": "fraud_confirmed",
+    "analyst": "E. Nair"
+  }
+]
