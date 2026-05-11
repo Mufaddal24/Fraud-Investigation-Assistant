@@ -1,0 +1,102 @@
+[
+  {
+    "case_id": "FR-2024-006",
+    "fraud_type": "card_not_present",
+    "date": "2024-06-03",
+    "summary": "Fraudulent subscription charges totalling $1,800 across 6 streaming platforms.",
+    "details": "Customer reported recurring charges on 6 streaming services they never signed up for. All subscriptions were created within a 2-hour window using the card details. IP addresses traced to a VPN exit node. Card details likely obtained from a data breach on a travel booking site the customer used 3 weeks prior. Resolution: all subscriptions cancelled, charges reversed, new card issued.",
+    "flagged_signals": ["multiple_new_subscriptions", "vpn_ip", "off_hours_activity"],
+    "resolution": "fraud_confirmed",
+    "analyst": "A. Patel"
+  },
+  {
+    "case_id": "FR-2024-007",
+    "fraud_type": "account_takeover",
+    "date": "2024-06-15",
+    "summary": "High-value savings account drained via two large transfers after SIM swap.",
+    "details": "Attacker performed a SIM swap with the customer's mobile carrier by presenting a fake ID. With control of the phone number, the attacker bypassed SMS-based 2FA and initiated two wire transfers totalling $22,000 to overseas accounts. The customer only discovered the fraud when their phone lost service. Resolution: transfers disputed with receiving banks, $14,000 recovered, account security upgraded to app-based 2FA.",
+    "flagged_signals": ["sim_swap", "2fa_bypass", "large_wire_transfer", "overseas_beneficiary"],
+    "resolution": "fraud_confirmed",
+    "analyst": "B. Kumar"
+  },
+  {
+    "case_id": "FR-2024-008",
+    "fraud_type": "synthetic_identity",
+    "date": "2024-06-22",
+    "summary": "Business account opened with fabricated EIN and fictitious company details.",
+    "details": "A business checking account was opened using a fabricated Employer Identification Number and a fictitious LLC registered in a state with minimal verification requirements. The account received $45,000 in ACH transfers over 3 weeks before being flagged by the ACH monitoring system. Funds were immediately swept to cryptocurrency exchanges. Resolution: account frozen, $8,000 remaining balance recovered, SAR filed with FinCEN.",
+    "flagged_signals": ["fabricated_ein", "rapid_ach_inflows", "crypto_exchange_transfers", "new_business_account"],
+    "resolution": "fraud_confirmed",
+    "analyst": "D. Mehta"
+  },
+  {
+    "case_id": "FR-2024-009",
+    "fraud_type": "friendly_fraud",
+    "date": "2024-07-04",
+    "summary": "Customer claimed non-delivery on $2,400 electronics purchase.",
+    "details": "Customer filed a chargeback claiming a laptop and accessories worth $2,400 were never delivered. Merchant provided signed delivery confirmation and GPS coordinates from the delivery vehicle matching the customer's address. Customer's social media showed photos of the laptop posted the day after delivery. Resolution: chargeback denied, customer warned about future disputes.",
+    "flagged_signals": ["signed_delivery_confirmation", "social_media_evidence", "repeat_dispute_history"],
+    "resolution": "fraud_not_confirmed",
+    "analyst": "C. Singh"
+  },
+  {
+    "case_id": "FR-2024-010",
+    "fraud_type": "internal_fraud",
+    "date": "2024-07-11",
+    "summary": "Loan officer approved fictitious loans to shell entities, pocketing origination fees.",
+    "details": "A loan officer approved 12 small business loans totalling $380,000 to 4 shell entities over 8 months. All entities shared the same registered agent and none had verifiable business activity. The officer received kickbacks through a third-party consulting firm. Detected by an internal model flagging the officer's approval rate and concentration in similar entity types. Resolution: officer terminated and arrested, loans referred to collections, controls updated.",
+    "flagged_signals": ["shell_entity_concentration", "approval_rate_anomaly", "kickback_payments", "shared_registered_agent"],
+    "resolution": "fraud_confirmed",
+    "analyst": "E. Nair"
+  },
+  {
+    "case_id": "FR-2024-011",
+    "fraud_type": "card_not_present",
+    "date": "2024-07-19",
+    "summary": "Card details used to purchase $3,100 in gift cards from multiple retailers.",
+    "details": "Nine gift card purchases were made across four online retailers within 90 minutes, totalling $3,100. Gift cards are a classic high-liquidation category used to quickly monetise stolen card details. The purchases were made from a residential IP address in a different state to the cardholder. Velocity rules flagged the pattern. Resolution: transactions blocked in real time, card frozen, customer notified.",
+    "flagged_signals": ["gift_card_purchases", "geo_mismatch", "velocity_breach", "high_liquidation"],
+    "resolution": "fraud_confirmed",
+    "analyst": "A. Patel"
+  },
+  {
+    "case_id": "FR-2024-012",
+    "fraud_type": "account_takeover",
+    "date": "2024-08-02",
+    "summary": "Corporate treasury account accessed via compromised admin credentials, $67,000 transferred.",
+    "details": "An attacker obtained admin credentials for a corporate banking portal through a spear-phishing email targeting the company's CFO. A $67,000 payroll transfer was rerouted to a fraudulent account. The company noticed discrepancies during end-of-month reconciliation. Resolution: $41,000 recovered from the receiving bank, remaining $26,000 unrecoverable, enhanced MFA enforced across corporate accounts.",
+    "flagged_signals": ["spear_phishing", "credential_compromise", "payroll_redirection", "corporate_account"],
+    "resolution": "fraud_confirmed",
+    "analyst": "B. Kumar"
+  },
+  {
+    "case_id": "FR-2024-013",
+    "fraud_type": "friendly_fraud",
+    "date": "2024-08-14",
+    "summary": "Merchant dispute over $890 jewellery purchase ruled inconclusive.",
+    "details": "Customer claimed they returned the jewellery item and never received a refund, initiating a chargeback. Merchant provided photos of the returned item showing visible damage not present at sale, suggesting the customer swapped the genuine item. However, the evidence was deemed insufficient to conclusively prove swap. Resolution: chargeback upheld in favour of customer, merchant advised to implement better return documentation.",
+    "flagged_signals": ["return_swap_suspected", "insufficient_merchant_evidence", "high_value_item"],
+    "resolution": "fraud_not_confirmed",
+    "analyst": "C. Singh"
+  },
+  {
+    "case_id": "FR-2024-014",
+    "fraud_type": "synthetic_identity",
+    "date": "2024-08-28",
+    "summary": "Piggybacking scheme: fraudster added as authorised user on victim's account to build credit.",
+    "details": "A fraudster paid a credit repair service to be added as an authorised user on a legitimate customer's account without the customer's knowledge. After 6 months of credit history accumulation, the fraudster opened 3 new credit lines and maxed them out within 2 weeks. Detected when the legitimate customer complained about an unknown authorised user. Resolution: authorised user removed, fraudulent accounts flagged across bureaus, SAR filed.",
+    "flagged_signals": ["unknown_authorised_user", "rapid_credit_utilisation", "credit_repair_service", "new_account_spike"],
+    "resolution": "fraud_confirmed",
+    "analyst": "D. Mehta"
+  },
+  {
+    "case_id": "FR-2024-015",
+    "fraud_type": "internal_fraud",
+    "date": "2024-09-05",
+    "summary": "Back-office staff manipulated exchange rates on foreign currency transactions to siphon $15,200.",
+    "details": "A back-office employee with access to the FX rate management system manually adjusted exchange rates on 34 small foreign currency transactions over 4 months, redirecting the margin difference to an account linked to a family member. Each individual manipulation was below the $500 alerting threshold. Detected by a new cross-transaction pattern model comparing executed rates against interbank benchmarks. Resolution: employee terminated, $15,200 recovered, rate management access restricted.",
+    "flagged_signals": ["fx_rate_manipulation", "below_threshold_pattern", "family_member_account", "access_abuse"],
+    "resolution": "fraud_confirmed",
+    "analyst": "E. Nair"
+  }
+]

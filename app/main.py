@@ -42,7 +42,7 @@ CHROMA_DIR      = "chroma_db"
 COLLECTION_NAME = "fraud_reports"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL       = "llama-3.3-70b-versatile"
-TOP_K           = 5
+TOP_K           = 8
 
 
 # ── Prompt (defined at module level so it's always available) ─────────────────
